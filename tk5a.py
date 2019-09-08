@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 
 '''
 See:
@@ -6,16 +6,25 @@ https://likegeeks.com/python-gui-examples-tkinter-tutorial/
 https://riptutorial.com/tkinter/example/29714/place--
 '''
 
-from tkinter import *
-from tkinter.ttk import *
+from Tkinter import *
+import ttk
+import os
+
+
+flist = os.listdir( './' )
+csvlist = [] # list of CSV files.
+print 'L:', flist
+for f in flist:
+    if ( f.endswith( '.csv' ) ):
+        csvlist.append( f )
+# Remove all non-CSV files.
 
 rownum = 0
  
 def clicked():
-	msg = 'Running ' + combofn.get() 
+	msg = 'Running ' + combofn.get() + ' and Y = ' + str( yvar1.get() )
 	lblfille.configure(text = msg )
 	print( 'FName:', combofn.get(), ' Ty:', type( combofn.get() ) )
-	print( 'XCols:', comboxc.get() )
 	print( 'Yval1:', yvar1.get() )
 
 window = Tk()
@@ -41,8 +50,10 @@ lbl2.grid(column=0, row = rownum )
 print('R:', rownum)
 rownum += 1
 
-combofn = Combobox(window)
-combofn['values']= ( 'IndiaResistdata2006.csv', 'cs2k.csv' )
+combofn = ttk.Combobox(window)
+#combofn['values']= ( 'IndiaResistdata2006.csv', 'cs2k.csv' )
+combofn['values']= csvlist
+
 combofn.current(0) #set the selected item
 combofn.grid(column=0, row = rownum )
 print('R:', rownum)
@@ -54,21 +65,6 @@ lblfillb.grid(column=0, row = rownum)
 print('R:', rownum)
 rownum += 1
 
-lbl3 = Label(window, text="Enter number of X-Columns")
- 
-lbl3.grid(column=0, row = rownum )
-print('R:', rownum)
-rownum += 1
- 
-comboxc = Combobox(window)
-
-comboxc['values']= ( 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 )
-
-comboxc.current(4) #set the selected item
-
-comboxc.grid(column=0, row = rownum )
-print('R:', rownum)
-rownum += 1
 
 lblfillc = Label(window, text="")
  
