@@ -78,11 +78,16 @@ def read_file():
 			NumXcols = linel - 5 
 			# Use for loop and append. Don't need to add to each list by name.
 			# Last four cols in input file are the Y vals.
+			# Added proc of any blank values.
 			for Xlocal in range ( 1, linel - 4 ):
-				try:
-					column_dict[ Xlocal ].append( float ( linelist[ Xlocal ] ) )
-				except:
-					pass
+				if( not linelist[ Xlocal ] ):
+					column_dict[ Xlocal ].append( 0.0 )
+				else:
+					try:
+						column_dict[ Xlocal ].append( float ( linelist[ Xlocal ] ) )
+					except:
+						#print( 'CD Err:', linelist[ Xlocal ], 'Len:', len( linelist[ Xlocal ] ) )
+						pass
 			try:
 				column_dict[ 12 ].append( float ( linelist[ CDYval ] ) )
 			except:
@@ -310,21 +315,14 @@ NumXcols = read_file()
 damping_factor   = 0.01
 error_value      = 0.1
 reqfontsize      = 8
-OPCSVfile        = 'outputX1to' + str( NumXcols ) + '_Y' + str( Yval ) + '.csv'
+OPCSVfile        = 'outputX1to' + str( NumXcols ) + '_Y' + str( Yval ) + '_suff.csv'
 
 #print( 'Output to:', OPCSVfile )
 
 opcsv = csv.writer( open( OPCSVfile, 'w' ) )
 
 # Headers for output.
-print( '{:>10s}'.format( 'Config' ), end='  ' )
-print( '{:>2s}'.format( 'Y' ),       end='  ' )
-print( '{:^7s}'.format( 'Csuff' ),   end='  ' )
-print( '{:^8s}'.format( 'Dsuff' ),   end='  ' )
-print( '{:^10s}'.format( 'F' ),      end='  ' )
-print( '{:<5s}'.format( 'PVAL' ),    end='  ' )
-print( '{:<3s}'.format( 'Num' ),     end='  ' )
-print( end='\n' )
+print( '    Config  Y Csuff    Dsuff       F     PVAL DF1  DF2' )
 
 opcsv.writerow( [ 'Config', 'Y', 'Csuff', 'Dsuff', 'F', 'PVAL', 'Df1', 'Num' ] )
 

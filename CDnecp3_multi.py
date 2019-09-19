@@ -80,10 +80,13 @@ def read_file():
 			# Use for loop and append. Don't need to add to each list by name.
 			# Last four cols in input file are the Y vals.
 			for Xlocal in range ( 1, linel - 4 ):
-				try:
-					column_dict[ Xlocal ].append( float ( linelist[ Xlocal ] ) )
-				except:
-					pass
+				if( not linelist[ Xlocal ] ):
+					column_dict[ Xlocal ].append( 0.0 )
+				else:
+					try:
+						column_dict[ Xlocal ].append( float ( linelist[ Xlocal ] ) )
+					except:
+						pass
 			try:
 				column_dict[ 12 ].append( float ( linelist[ CDYval ] ) )
 			except:
@@ -322,13 +325,13 @@ NumXcols = read_file()
 damping_factor   = 0.01
 error_value      = 0.1
 reqfontsize      = 8
-OPCSVfile        = 'outputX1to' + str( NumXcols ) + '_Y' + str( Yval ) + '.csv'
+OPCSVfile        = 'outputX1to' + str( NumXcols ) + '_Y' + str( Yval ) + '_nec.csv'
 
 #print( 'Output to:', OPCSVfile )
 
 opcsv = csv.writer( open( OPCSVfile, 'w' ) )
 
-# Headers for output. Does not pr header for DF1 or 2. Why ?
+# Headers for output. 
 print( '    Config  Y Cnec     Dnec        F     PVAL DF1  DF2' )
 
 opcsv.writerow( [ 'Config', 'Y', 'Cnec', 'Dnec', 'F', 'PVAL', 'Df1', 'Num' ] )
