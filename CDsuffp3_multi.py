@@ -9,8 +9,11 @@
 # Calculates Csuff in one procedure. Add graph plot.
 # Version 1 to calculate C&D Suff with 2-11 X columns & 4 Y columns
 # JM Thu  5 Sep 12:09:34 BST 2019
+# Added test for call from Cmd Line or from GUI.
+# All output to directory based on input filename and date/time.
+# JM Tue 24 Sep 18:13:38 BST 2019
 
-from datetime import datetime
+import datetime
 from scipy.stats import norm, f
 import matplotlib.pyplot as plt
 import itertools
@@ -18,23 +21,9 @@ import csv
 import sys
 import os
 
-if ( len( sys.argv ) == 1 ):
-    fname = 'cs2k.csv'
-    Yval = 1
-elif ( len( sys.argv ) == 2 ):
-    fname = sys.argv[ 1 ]
-    Yval = 1
-elif ( len( sys.argv ) == 3 ):
-    fname = sys.argv[ 1 ]
-    Yval = int( sys.argv[ 2 ] )
-else:
-    fname = 'cs2k.csv'
-    Yval = 1
-
-if ( Yval > 4 ):
-    # Can't allow Y to be more than four. Only four Y vals allowed.
-    Yval = 1
-
+damping_factor   = 0.01
+error_value      = 0.1
+reqfontsize      = 8
 #print( 'F:', fname )
 
 X0list = []
@@ -66,8 +55,8 @@ column_dict = {
 12 : YNlist
 }
 
-def read_file():
-	#print( 'Reading:', fname )    
+def read_file( fname, Yval ):
+#	print( 'Reading:', fname )    
 	with open( fname, 'r') as f:
 		reader = csv.reader(f)
 		for row in reader:
@@ -96,11 +85,13 @@ def read_file():
 
 #************** End Read   ************** 
 
-def plot_zt_graph( xlist = [], ylist = [], pltitle = 'DXY', fname = 'DXY.png' ):
+def plot_zt_graph( xlist = [], ylist = [], pltitle = 'DXY', fname = 'DXY.png', Yval = 1, opdirname = './' ):
 	Xmin = -3.0
 	Ymin = -3.0
 	Xmax =  3.0
 	Ymax =  3.0
+#	print( 'ZT OP Dirname:', opdirname )
+	fname = opdirname + '/' + fname
 
 	plt.figure( figsize=( 3, 3 ) ) 
 	# Sets size of axis ticks and numbers.
@@ -141,11 +132,14 @@ def calc_df1(  xlist, ylist ):
 		
 #************** End calc_df1 ************ 
 
-def calc_ssd(  xlist, ylist, pltitle = 'DXY', fname = 'DXY.png' ):
+def calc_ssd(  xlist, ylist, pltitle = 'DXY', fname = 'DXY.png', Yval = 1, opdirname = './' ):
 	ssd = 0.0
 	zxlist = Ztransform( xlist )
 	zylist = Ztransform( ylist )
-	plot_zt_graph( zxlist, zylist, pltitle, fname )
+	#print( 'SSD OP Dirname:', opdirname )
+	#print( 'SSD OP Fname:', fname )
+	#print( 'SSD OP Y:', Yval )
+	plot_zt_graph( zxlist, zylist, pltitle, fname, Yval, opdirname )
 	
 	for XL in range(0, len( xlist ), 1 ):
 		
@@ -181,14 +175,15 @@ def calc_nullsd1( xlist, ylist, error_value ):
 	
 #************** End calc_nullsd1 ******** 
 
-def proc_Dsuff(  xlist, ylist, pltitle = 'DXY', Csuff = 0.0, fname = 'DXY.png' ):
+def proc_Dsuff(  xlist, ylist, pltitle = 'DXY', Csuff = 0.0, fname = 'DXY.png', Yval = 1, opdirname = './', opcsv = 'OP', optxt = 'OT' ):
 	ssd = 0.0
 	msd = 0.0
 	df1 = 0.0
 	F   = 0.0
 	PVAL = 0.0
 	nullsd = 0.0
-	ssd = calc_ssd(  xlist, ylist, pltitle, fname )
+	#print( 'PDsuff OP Dirname:', opdirname )
+	ssd = calc_ssd(  xlist, ylist, pltitle, fname, Yval, opdirname )
 	df1 = calc_df1(  xlist, ylist )
 	
 	df2 = len( ylist )
@@ -200,31 +195,20 @@ def proc_Dsuff(  xlist, ylist, pltitle = 'DXY', Csuff = 0.0, fname = 'DXY.png' )
 		F = msd/emsd 
 		PVAL = f.sf ( F, df1, df2, loc=0, scale=1 ) 
 	## Only do calcs if DF1 > 0. Error o'wise.
-
-
-	'''
-	print 'Fname:', os.path.splitext( fname )[0]
-	print 'SSD:', ssd
-	print 'DF1:', df1
-	print 'DF2:', df2
-	print 'NULLSD:', nullsd
-	print 'MSD:', msd
-	print 'EMSD:', emsd
-	print 'F:', F 
-	print 'PVAL - SF:', PVAL
-	print 'Csuff:', Csuff
-	'''
-	
+	## Write output to text file instead of on screen for GUI version.	
+	## Spaces added for alignment.
 	ProcLabel = os.path.splitext( fname )[0] 
 	ProcLabel = ProcLabel.replace( 'D', '' ) # Remove D from Label.
-	print( '{:>10s}'.format( ProcLabel ), end=' ' )
-	print( '{:>2d}'.format( Yval ),       end=' ' )
-	print( '{:>4.3f}'.format( Csuff ),    end=' ' )
-	print( '{:>8.3f}'.format( ssd ),      end=' ' )
-	print( '{:>11.3f}'.format( F ),       end=' ' )
-	print( '{:>3.2f}'.format( PVAL ),     end=' ' )
-	print( '{:>3.2f}'.format( df1 ),      end=' ' )
-	print( '{:>3d}'.format( df2 ) )
+	txtmsg = '{:>10s}'.format( ProcLabel ) + \
+	' {:>2d}'.format( Yval ) + \
+	' {:>4.3f}'.format( Csuff ) + \
+	' {:>8.3f}'.format( ssd ) + \
+	' {:>11.3f}'.format( F ) + \
+	' {:>3.2f}'.format( PVAL ) + \
+	' {:>3.2f}'.format( df1 ) + \
+	'{:>3d}'.format( df2 ) + '\n'
+
+	optxt.write( txtmsg )
 	#print
 	opcsv.writerow( [ ProcLabel, Yval, '{:>4.3f}'.format( Csuff ), '{:>8.3f}'.format( ssd ), 
 	'{:>11.3f}'.format( F ), '{:>3.2f}'.format( PVAL ), '{:>3.2f}'.format( df1 ), '{:>3d}'.format( df2 ) ] )
@@ -233,7 +217,7 @@ def proc_Dsuff(  xlist, ylist, pltitle = 'DXY', Csuff = 0.0, fname = 'DXY.png' )
 
 #************** Csuff Processing ************** 
 
-def plot_graph( xlist = [], ylist = [], pltitle = 'XY', Csuff = 0.0, fname = 'XY.png' ):
+def plot_graph( xlist = [], ylist = [], pltitle = 'XY', Csuff = 0.0, fname = 'XY.png', Yval = 1, opdirname = './' ):
 	MinXaxis =  float( min( xlist ) ) - 1.0
 	MaxXaxis =  float( max( xlist ) ) + 1.0
 
@@ -243,6 +227,7 @@ def plot_graph( xlist = [], ylist = [], pltitle = 'XY', Csuff = 0.0, fname = 'XY
 	Ymin = 0.0
 	Xmax = 1.0
 	Ymax = 1.0
+	fname = opdirname + '/' + fname
 	plt.figure( figsize=( 3, 3 ) ) 
 	# Sets size of axis ticks and numbers.
 	plt.tick_params(labelsize=6)
@@ -263,7 +248,7 @@ def plot_graph( xlist = [], ylist = [], pltitle = 'XY', Csuff = 0.0, fname = 'XY
 
 #************** Process Combinations **** 
 
-def proc_cons4b( XvalListn=[]):
+def proc_cons4b( XvalListn=[], fname='XX', Yval=1, opdirname='./', opcsv = 'OP', optxt = 'OT' ):
 
     Csuff    = 0.0 # Csuff initialised
     CsuffNum = 0.0 # Csuff Numerator
@@ -299,40 +284,78 @@ def proc_cons4b( XvalListn=[]):
     # Reduce length of Csuff for plot title.
     pltitlecs = pltitlecs + '; Csuff = ' + Csuffplot
     pltitleds = pltitleds + ' )'
-    plot_graph( xlist_plot, column_dict[ 12 ], pltitlecs, Csuff, fnamecs )
-    proc_Dsuff( xlist_plot, column_dict[ 12 ], pltitleds, Csuff, fnameds )
+    #print( 'PC4 OP Dirname:', opdirname )
+    plot_graph( xlist_plot, column_dict[ 12 ], pltitlecs, Csuff, fnamecs, Yval, opdirname )
+    proc_Dsuff( xlist_plot, column_dict[ 12 ], pltitleds, Csuff, fnameds, Yval, opdirname, opcsv, optxt )
 
 #************** End proc_cons4 ********** 
 
 
+####################### SUFF main #######################
 
-####################### main #######################
+def suff_main( fname, Yval ):
+	#print( 'Processing File:', fname )
+	#print( 'Fname:', os.path.splitext( fname )[0] )
+	NumXcols = read_file( fname, Yval )
+#	print( 'NumXcols:', NumXcols )
 
-#print( 'Processing File:', fname )
-#print( 'Fname:', os.path.splitext( fname )[0] )
-NumXcols = read_file()
+	opdirname = os.path.splitext( fname )[0]
 
-damping_factor   = 0.01
-error_value      = 0.1
-reqfontsize      = 8
-OPCSVfile        = 'outputX1to' + str( NumXcols ) + '_Y' + str( Yval ) + '_suff.csv'
+	DandT     = datetime.datetime.now()
+	opdirname = opdirname + '_suff_Y' + str( Yval ) + '_' + DandT.strftime( '%Y_%m_%d_%H_%M' )
+	#print( 'OP Dirname:', opdirname )
 
-#print( 'Output to:', OPCSVfile )
+	if ( os.path.exists( opdirname ) ):
+	#	print( 'EXISTS OP Dirname:', opdirname )
+		direxist = True
+	else:
+		os.mkdir( opdirname )
+	#	print( 'OP Dirname:', opdirname )
 
-opcsv = csv.writer( open( OPCSVfile, 'w' ) )
+	OPCSVfile = opdirname + '/' + 'outputX1to' + str( NumXcols ) + '_Y' + str( Yval ) + '_suff.csv'
+	OPTXTfile = opdirname + '/' + 'outputX1to' + str( NumXcols ) + '_Y' + str( Yval ) + '_suff.txt'
 
-# Headers for output.
-print( '    Config  Y Csuff    Dsuff       F     PVAL DF1  DF2' )
+	#print( 'Output to:', OPCSVfile )
 
-opcsv.writerow( [ 'Config', 'Y', 'Csuff', 'Dsuff', 'F', 'PVAL', 'Df1', 'Num' ] )
+	opcsv = csv.writer( open( OPCSVfile, 'w' ) )
+	optxt = open( OPTXTfile, 'w' ) 
 
-varlist = list( range(1, NumXcols + 1 ) )
-# NB range goes from start to end-1. Feature !
+	# Headers for output.
+	opcsv.writerow( [ 'Config', 'Y', 'Csuff', 'Dsuff', 'F', 'PVAL', 'Df1', 'Num' ] )
 
-# Need to cater for diff lengths of xval list. Hence 6 procs in orig prog.
+	optxt.write( '    Config  Y Csuff    Dsuff       F     PVAL DF1  DF2\n' )
 
-for Xindex in range(1, len(varlist) + 1):
-    XvalList = list(itertools.combinations(varlist, Xindex))
-    # use for xv in xvallist to process each item in xvallist separately.
-    for xvv in( XvalList ):
-        proc_cons4b( xvv )
+	varlist = list( range(1, NumXcols + 1 ) )
+	# NB range goes from start to end-1. Feature !
+
+	# Need to cater for diff lengths of xval list. Hence 6 procs in orig prog.
+
+	for Xindex in range(1, len(varlist) + 1):
+		XvalList = list(itertools.combinations(varlist, Xindex))
+		# use for xv in xvallist to process each item in xvallist separately.
+		for xvv in( XvalList ):
+			proc_cons4b( xvv, fname, Yval, opdirname, opcsv, optxt )
+
+	optxt.close()
+
+#************** End suff_main ********** 
+
+if ( __name__ == '__main__' ):
+	if ( len( sys.argv ) == 1 ):
+	    fname = 'cs2k.csv'
+	    Yval = 1
+	elif ( len( sys.argv ) == 2 ):
+	    fname = sys.argv[ 1 ]
+	    Yval = 1
+	elif ( len( sys.argv ) == 3 ):
+	    fname = sys.argv[ 1 ]
+	    Yval = int( sys.argv[ 2 ] )
+	else:
+	    fname = 'cs2k.csv'
+	    Yval = 1
+
+	if ( Yval > 4 ):
+	    # Can't allow Y to be more than four. Only four Y vals allowed.
+	    Yval = 1
+	suff_main( fname, Yval )
+
