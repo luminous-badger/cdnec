@@ -10,8 +10,11 @@
 # Version 1 to calculate C&D Necessary with 2-11 X columns & 4 Y columns
 # Copy of CDsuff. Modified to calculate C&D Nec.
 # JM Thu  5 Sep 12:24:27 BST 2019
+# Added test for call from Cmd Line or from GUI.
+# All output to directory based on input filename and date/time.
+# JM Tue  1 Oct 16:05:30 BST 2019
 
-from datetime import datetime
+import datetime
 from scipy.stats import norm, f
 import matplotlib.pyplot as plt
 import itertools
@@ -19,22 +22,9 @@ import csv
 import sys
 import os
 
-if ( len( sys.argv ) == 1 ):
-    fname = 'cs2k.csv'
-    Yval = 1
-elif ( len( sys.argv ) == 2 ):
-    fname = sys.argv[ 1 ]
-    Yval = 1
-elif ( len( sys.argv ) == 3 ):
-    fname = sys.argv[ 1 ]
-    Yval = int( sys.argv[ 2 ] )
-else:
-    fname = 'cs2k.csv'
-    Yval = 1
-
-if ( Yval > 4 ):
-    # Can't allow Y to be more than four. Only four Y vals allowed.
-    Yval = 1
+damping_factor   = 0.01
+error_value      = 0.1
+reqfontsize      = 8
 
 #print( 'F:', fname )
 
@@ -67,7 +57,7 @@ column_dict = {
 12 : YNlist
 }
 
-def read_file():
+def read_file( fname, Yval ):
 	#print( 'Reading:', fname )    
 	with open( fname, 'r') as f:
 		reader = csv.reader(f)
@@ -95,11 +85,13 @@ def read_file():
 
 #************** End Read   ************** 
 
-def plot_zt_graph( xlist = [], ylist = [], pltitle = 'DXY', fname = 'DXY.png' ):
+def plot_zt_graph( xlist = [], ylist = [], pltitle = 'DXY', fname = 'DXY.png', Yval = 1, opdirname = './' ):
 	Xmin = -3.0
 	Ymin = -3.0
 	Xmax =  3.0
 	Ymax =  3.0
+#	print( 'ZT OP Dirname:', opdirname )
+	fname = opdirname + '/' + fname
 
 	plt.figure( figsize=( 3, 3 ) ) 
 	# Sets size of axis ticks and numbers.
@@ -140,12 +132,12 @@ def calc_df1(  xlist, ylist ):
 		
 #************** End calc_df1 ************ 
 
-def calc_ssd(  xlist, ylist, pltitle = 'DXY', fname = 'DXY.png' ):
+def calc_ssd(  xlist, ylist, pltitle = 'DXY', fname = 'DXY.png', Yval = 1, opdirname = './' ):
 	# Changed for NEC calc. if yl > xl then d = 0 else 1
 	ssd = 0.0
 	zxlist = Ztransform( xlist )
 	zylist = Ztransform( ylist )
-	plot_zt_graph( zxlist, zylist, pltitle, fname )
+	plot_zt_graph( zxlist, zylist, pltitle, fname, Yval, opdirname )
 	
 	for XL in range(0, len( xlist ), 1 ):
 		
@@ -181,14 +173,14 @@ def calc_nullsd1( xlist, ylist, error_value ):
 	
 #************** End calc_nullsd1 ******** 
 
-def proc_Dnec(  xlist, ylist, pltitle = 'DXY', Cnec = 0.0, fname = 'DXY.png' ):
+def proc_Dnec(  xlist, ylist, pltitle = 'DXY', Cnec = 0.0, fname = 'DXY.png', Yval = 1, opdirname = './', opcsv = 'OP', optxt = 'OT' ):
 	ssd = 0.0
 	msd = 0.0
 	df1 = 0.0
 	F   = 0.0
 	PVAL = 0.0
 	nullsd = 0.0
-	ssd = calc_ssd(  xlist, ylist, pltitle, fname )
+	ssd = calc_ssd(  xlist, ylist, pltitle, fname, Yval, opdirname )
 	df1 = calc_df1(  xlist, ylist )
 	
 	df2 = len( ylist )
@@ -200,31 +192,21 @@ def proc_Dnec(  xlist, ylist, pltitle = 'DXY', Cnec = 0.0, fname = 'DXY.png' ):
 		F = msd/emsd 
 		PVAL = f.sf ( F, df1, df2, loc=0, scale=1 ) 
 	## Only do calcs if DF1 > 0. Error o'wise.
-
-
-	'''
-	print 'Fname:', os.path.splitext( fname )[0]
-	print 'SSD:', ssd
-	print 'DF1:', df1
-	print 'DF2:', df2
-	print 'NULLSD:', nullsd
-	print 'MSD:', msd
-	print 'EMSD:', emsd
-	print 'F:', F 
-	print 'PVAL - SF:', PVAL
-	print 'Cnec:', Cnec
-	'''
+	## Write output to text file instead of on screen for GUI version.	
+	## Spaces added for alignment.
 	
 	ProcLabel = os.path.splitext( fname )[0] 
 	ProcLabel = ProcLabel.replace( 'D', '' ) # Remove D from Label.
-	print( '{:>10s}'.format( ProcLabel ), end=' ' )
-	print( '{:>2d}'.format( Yval ),       end=' ' )
-	print( '{:>4.3f}'.format( Cnec ),    end=' ' )
-	print( '{:>8.3f}'.format( ssd ),      end=' ' )
-	print( '{:>11.3f}'.format( F ),       end=' ' )
-	print( '{:>3.2f}'.format( PVAL ),     end=' ' )
-	print( '{:>3.2f}'.format( df1 ),      end=' ' )
-	print( '{:>3d}'.format( df2 ) )
+	txtmsg = '{:>10s}'.format( ProcLabel ) + \
+	' {:>2d}'.format( Yval ) + \
+	' {:>4.3f}'.format( Cnec ) + \
+	' {:>8.3f}'.format( ssd ) + \
+	' {:>11.3f}'.format( F ) + \
+	' {:>3.2f}'.format( PVAL ) + \
+	' {:>3.2f}'.format( df1 ) + \
+	'{:>3d}'.format( df2 ) + '\n'
+
+	optxt.write( txtmsg )
 	#print
 	opcsv.writerow( [ ProcLabel, Yval, '{:>4.3f}'.format( Cnec ), '{:>8.3f}'.format( ssd ), 
 	'{:>11.3f}'.format( F ), '{:>3.2f}'.format( PVAL ), '{:>3.2f}'.format( df1 ), '{:>3d}'.format( df2 ) ] )
@@ -233,7 +215,7 @@ def proc_Dnec(  xlist, ylist, pltitle = 'DXY', Cnec = 0.0, fname = 'DXY.png' ):
 
 #************** Cnec Processing ************** 
 
-def plot_graph( xlist = [], ylist = [], pltitle = 'XY', Cnec = 0.0, fname = 'XY.png' ):
+def plot_graph( xlist = [], ylist = [], pltitle = 'XY', Cnec = 0.0, fname = 'XY.png', Yval = 1, opdirname = './' ):
 	MinXaxis =  float( min( xlist ) ) - 1.0
 	MaxXaxis =  float( max( xlist ) ) + 1.0
 
@@ -243,6 +225,7 @@ def plot_graph( xlist = [], ylist = [], pltitle = 'XY', Cnec = 0.0, fname = 'XY.
 	Ymin = 0.0
 	Xmax = 1.0
 	Ymax = 1.0
+	fname = opdirname + '/' + fname
 	plt.figure( figsize=( 3, 3 ) ) 
 	# Sets size of axis ticks and numbers.
 	plt.tick_params(labelsize=6)
@@ -263,7 +246,7 @@ def plot_graph( xlist = [], ylist = [], pltitle = 'XY', Cnec = 0.0, fname = 'XY.
 
 #************** Process Combinations **** 
 
-def proc_cons4b( XvalListn=[]):
+def proc_cons4b( XvalListn=[], fname='XX', Yval=1, opdirname='./', opcsv = 'OP', optxt = 'OT' ):
     # Changed for NEC. Denom is now sum of Y column.
     Cnec    = 0.0 # Cnec initialised
     CnecNum = 0.0 # Cnec Numerator
@@ -308,41 +291,83 @@ def proc_cons4b( XvalListn=[]):
     pltitlecs = pltitlecs + '; Cnec = ' + Cnecplot
     pltitleds = pltitleds + ' )'
     #print()
-    # What are we plotting ?? Same plot as suff plot.
-    plot_graph( xlist_plot, column_dict[ 12 ], pltitlecs, Cnec, fnamecs )
-    proc_Dnec( xlist_plot, column_dict[ 12 ], pltitleds, Cnec, fnameds )
+    # Plot output graphs.
+    plot_graph( xlist_plot, column_dict[ 12 ], pltitlecs, Cnec, fnamecs, Yval, opdirname )
+    proc_Dnec( xlist_plot, column_dict[ 12 ], pltitleds, Cnec, fnameds, Yval, opdirname, opcsv, optxt )
 
 #************** End proc_cons4 ********** 
 
 
+####################### NEC main #######################
 
-####################### main #######################
 
-#print( 'Processing File:', fname )
-#print( 'Fname:', os.path.splitext( fname )[0] )
-NumXcols = read_file()
+def nec_main( fname, Yval ):
+	#print( 'Processing File:', fname )
+	#print( 'Fname:', os.path.splitext( fname )[0] )
+	NumXcols = read_file( fname, Yval )
+#	print( 'NumXcols:', NumXcols )
 
-damping_factor   = 0.01
-error_value      = 0.1
-reqfontsize      = 8
-OPCSVfile        = 'outputX1to' + str( NumXcols ) + '_Y' + str( Yval ) + '_nec.csv'
+	opdirname = os.path.splitext( fname )[0]
 
-#print( 'Output to:', OPCSVfile )
+	DandT     = datetime.datetime.now()
+	opdirname = opdirname + '_nec_Y' + str( Yval ) + '_' + DandT.strftime( '%Y_%m_%d_%H_%M' )
+	#print( 'OP Dirname:', opdirname )
 
-opcsv = csv.writer( open( OPCSVfile, 'w' ) )
+	if ( os.path.exists( opdirname ) ):
+	#	print( 'EXISTS OP Dirname:', opdirname )
+		direxist = True
+	else:
+		os.mkdir( opdirname )
+	#	print( 'OP Dirname:', opdirname )
 
-# Headers for output. 
-print( '    Config  Y Cnec     Dnec        F     PVAL DF1  DF2' )
+	OPCSVfile = opdirname + '/' + 'outputX1to' + str( NumXcols ) + '_Y' + str( Yval ) + '_nec.csv'
+	OPTXTfile = opdirname + '/' + 'outputX1to' + str( NumXcols ) + '_Y' + str( Yval ) + '_nec.txt'
 
-opcsv.writerow( [ 'Config', 'Y', 'Cnec', 'Dnec', 'F', 'PVAL', 'Df1', 'Num' ] )
+	#print( 'Output to:', OPCSVfile )
 
-varlist = list( range(1, NumXcols + 1 ) )
-# NB range goes from start to end-1. Feature !
+	opcsv = csv.writer( open( OPCSVfile, 'w' ) )
+	optxt = open( OPTXTfile, 'w' ) 
 
-# Need to cater for diff lengths of xval list. Hence 6 procs in orig prog.
+	# Headers for output.
+	opcsv.writerow( [ 'Config', 'Y', 'Cnec', 'Dnec', 'F', 'PVAL', 'Df1', 'Num' ] )
 
-for Xindex in range(1, len(varlist) + 1):
-    XvalList = list(itertools.combinations(varlist, Xindex))
-    # use for xv in xvallist to process each item in xvallist separately.
-    for xvv in( XvalList ):
-        proc_cons4b( xvv )
+	optxt.write( '    Config  Y Cnec     Dnec        F     PVAL DF1  DF2\n' )
+
+	varlist = list( range(1, NumXcols + 1 ) )
+	# NB range goes from start to end-1. Feature !
+
+	# Need to cater for diff lengths of xval list. Hence 6 procs in orig prog.
+
+	for Xindex in range(1, len(varlist) + 1):
+		XvalList = list(itertools.combinations(varlist, Xindex))
+		# use for xv in xvallist to process each item in xvallist separately.
+		for xvv in( XvalList ):
+			proc_cons4b( xvv, fname, Yval, opdirname, opcsv, optxt )
+
+	optxt.close()
+
+#************** End nec_main ********** 
+
+
+#************** Cmd Line check *********
+## Checks if called from command line.
+
+if ( __name__ == '__main__' ):
+	if ( len( sys.argv ) == 1 ):
+	    fname = 'cs2k.csv'
+	    Yval = 1
+	elif ( len( sys.argv ) == 2 ):
+	    fname = sys.argv[ 1 ]
+	    Yval = 1
+	elif ( len( sys.argv ) == 3 ):
+	    fname = sys.argv[ 1 ]
+	    Yval = int( sys.argv[ 2 ] )
+	else:
+	    fname = 'cs2k.csv'
+	    Yval = 1
+
+	if ( Yval > 4 ):
+	    # Can't allow Y to be more than four. Only four Y vals allowed.
+	    Yval = 1
+	nec_main( fname, Yval )
+

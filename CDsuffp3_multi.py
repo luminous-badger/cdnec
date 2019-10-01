@@ -284,7 +284,7 @@ def proc_cons4b( XvalListn=[], fname='XX', Yval=1, opdirname='./', opcsv = 'OP',
     # Reduce length of Csuff for plot title.
     pltitlecs = pltitlecs + '; Csuff = ' + Csuffplot
     pltitleds = pltitleds + ' )'
-    #print( 'PC4 OP Dirname:', opdirname )
+    #Plot output graphs.
     plot_graph( xlist_plot, column_dict[ 12 ], pltitlecs, Csuff, fnamecs, Yval, opdirname )
     proc_Dsuff( xlist_plot, column_dict[ 12 ], pltitleds, Csuff, fnameds, Yval, opdirname, opcsv, optxt )
 
@@ -340,6 +340,8 @@ def suff_main( fname, Yval ):
 
 #************** End suff_main ********** 
 
+#************** Cmd Line check *********
+## Checks if called from command line.
 if ( __name__ == '__main__' ):
 	if ( len( sys.argv ) == 1 ):
 	    fname = 'cs2k.csv'
